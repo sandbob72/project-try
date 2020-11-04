@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Container, Table, Icon, Button } from 'semantic-ui-react'
+import { Container, Table, Icon, Button, Modal, Header, Image, Form, Segment, Dimmer, Loader } from 'semantic-ui-react'
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -9,6 +9,9 @@ function App() {
   const [price, setPrice] = useState(0);
   const [edit, setEdit] = useState(false)
   const [idProduct, setIdProduct] = useState(null)
+  const [openGet, setOpenGet] = useState(false)
+  const [openAdd, setOpenAdd] = useState(false)
+  const [openUp, setOpenUp] = useState(false)
 
   const getProducts = async () => {
     const result = await axios.get(
@@ -35,6 +38,7 @@ function App() {
         price: price, // This is the body part
       },
     });
+    setOpenAdd(false)
     getProducts()
   };
 
@@ -66,109 +70,165 @@ function App() {
     setIdProduct(id)
     setName(name)
     setPrice(price)
-
-    setEdit(true)
   }
 
-  const formUpdate = (id, name, price) => {
+  const UpdateProduct = (id, name, price) => {
     upProduct(id, name, price)
     setIdProduct(null)
     setName("")
     setPrice(0)
     getProducts()
-    setEdit(false)
+    setOpenUp(false)
+  }
+
+  const formUpdate = (id, _name, _price) => {
+    return (
+      <Modal
+        onClose={() => setOpenUp(false)}
+        onOpen={() => setOpenUp(true)}
+        open={openUp}
+        trigger={<Button color='yellow' icon onClick={() => editProduct(id, _name, _price)}><Icon name='edit' /></Button>}
+      >
+        <Modal.Header>Update Product</Modal.Header>
+        <Modal.Content>
+          <Form>
+            <Form.Field>
+              <label>Product Name</label>
+              <input type="text" placeholder='Product Name' value={name} onChange={(e) => setName(e.target.value)} />
+            </Form.Field>
+            <Form.Field>
+              <label>Price</label>
+              <input type="number" placeholder='Price' value={price} onChange={(e) => setPrice(e.target.value)} />
+            </Form.Field>
+          </Form>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button color='black' onClick={() => setOpenUp(false)}>
+            cancel
+            </Button>
+          <Button
+            color='green'
+            onClick={() => UpdateProduct(idProduct, name, price)}
+            content='Update Product'
+          />
+        </Modal.Actions>
+      </Modal>
+    )
+
+  }
+
+  const ReadProduct = (id) => {
+    return (
+      <Modal
+        centered={false}
+        open={openGet}
+        onClose={() => setOpenGet(false)}
+        onOpen={() => setOpenGet(true)}
+        trigger={
+          <Button onClick={() => getProduct(id)} icon>
+            <Icon name='bars' />
+          </Button>}
+      >
+        <Modal.Header>Detail</Modal.Header>
+        <Modal.Content>
+          <Modal.Description>
+            {product.name} {product.price}
+          </Modal.Description>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button onClick={() => setOpenGet(false)}>OK</Button>
+        </Modal.Actions>
+      </Modal>
+    )
   }
 
   useEffect(() => {
     getProducts();
   }, []);
 
-  if (products.length === 0) {
-    return <div>load data</div>;
-  }
-
   return (
     <div>
-      <h2>Product</h2>
-      <table >
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Price</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product, index) => (
-            <tr key={index}>
-              <td>{product ? product.name : "-"}</td>
-              <td>{product ? product.price : 0}</td>
-              <td>
-                <button onClick={() => getProduct(product._id)}>Get</button>
-                <button onClick={() => delProduct(product._id)}> Delete</button>
-                <button onClick={() => editProduct(product._id, product.name, product.price)}>Update</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Container>
+        <h2>Product</h2>
+        <Modal
+          onClose={() => setOpenAdd(false)}
+          onOpen={() => setOpenAdd(true)}
+          open={openAdd}
+          trigger={<Button color='green'>Add</Button>}
+        >
+          <Modal.Header>New Product</Modal.Header>
+          <Modal.Content>
+            <Form>
+              <Form.Field>
+                <label>Product Name</label>
+                <input type="text" placeholder='Product Name' value={name} onChange={(e) => setName(e.target.value)} />
+              </Form.Field>
+              <Form.Field>
+                <label>Price</label>
+                <input type="number" placeholder='Price' value={price} onChange={(e) => setPrice(e.target.value)} />
+              </Form.Field>
+            </Form>
+          </Modal.Content>
+          <Modal.Actions>
+            <Button color='black' onClick={() => setOpenAdd(false)}>
+              cancel
+            </Button>
+            <Button
+              color='green'
+              onClick={() => addProduct(name, price)}
+              content='Add new Product'
+            />
+          </Modal.Actions>
+        </Modal>
 
+        {products.length > 0 ? (
+          <Table celled fixed singleLine>
+            <Table.Header>
+              <Table.Row>
+                <Table.HeaderCell>Product</Table.HeaderCell>
+                <Table.HeaderCell>Price</Table.HeaderCell>
+                <Table.HeaderCell>Action</Table.HeaderCell>
+              </Table.Row>
+            </Table.Header>
 
-      selected Product: {product.name}
-
-      <div>
-        {edit ? (
-          <div>
-            <h2>Update Product</h2>
-            Name:
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} /> <br />
-            Price:
-            <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /> <br />
-            <button onClick={() => formUpdate(idProduct, name, price)}>update Product</button>
-          </div>
+            <Table.Body>
+              {products.map((product, index) => (
+                <Table.Row key={index}>
+                  <Table.Cell>{product ? product.name : "-"}</Table.Cell>
+                  <Table.Cell>{product ? product.price : 0}</Table.Cell>
+                  <Table.Cell>
+                    {ReadProduct(product._id)}
+                    <Button onClick={() => delProduct(product._id)} color='red' icon>
+                      <Icon name='delete' />
+                    </Button>
+                    {formUpdate(product._id, product.name, product.price)}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
         ) : (
             <div>
-              <h2>Add Product</h2>
-               Name:
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} /> <br />
-               Price:
-              <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /> <br />
-              <button onClick={() => addProduct(name, price)}>Add new Product</button>
+              <Table celled fixed singleLine>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.HeaderCell>Product</Table.HeaderCell>
+                    <Table.HeaderCell>Price</Table.HeaderCell>
+                    <Table.HeaderCell>Action</Table.HeaderCell>
+                  </Table.Row>
+                </Table.Header>
+              </Table>
+              <Segment>
+                <Dimmer active>
+                  <Loader size='massive'>Loading</Loader>
+                </Dimmer>
+                <Image src='https://react.semantic-ui.com/images/wireframe/short-paragraph.png' />
+                <Image src='https://react.semantic-ui.com/images/wireframe/short-paragraph.png' />
+                <Image src='https://react.semantic-ui.com/images/wireframe/short-paragraph.png' />
+              </Segment>
             </div>
           )}
-      </div>
-      <Container>
-        <Table celled fixed singleLine>
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>Product</Table.HeaderCell>
-              <Table.HeaderCell>Price</Table.HeaderCell>
-              <Table.HeaderCell>Action</Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
-
-          <Table.Body>
-            {products.map((product, index) => (
-              <Table.Row key={index}>
-                <Table.Cell>{product ? product.name : "-"}</Table.Cell>
-                <Table.Cell>{product ? product.price : 0}</Table.Cell>
-                <Table.Cell>
-                  <Button onClick={() => getProduct(product._id)} icon>
-                    <Icon name='bars' />
-                  </Button>
-                  <Button onClick={() => delProduct(product._id)} icon>
-                    <Icon name='delete' />
-                  </Button>
-                  <Button onClick={() => editProduct(product._id, product.name, product.price)} icon>
-                    <Icon name='edit' />
-                  </Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
       </Container>
-
-
     </div>
   );
 }
